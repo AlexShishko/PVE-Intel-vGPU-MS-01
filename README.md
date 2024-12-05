@@ -121,11 +121,13 @@ Change:
 ```
 apt update && apt install pve-headers-$(uname -r)
 apt update && apt install git pve-headers mokutil
+KERNEL=$(uname -r); KERNEL=${KERNEL%-pve}
 ```
 to
 ```
 apt update && apt install linux-headers-$(uname -r)
 apt update && apt install git  mokutil
+KERNEL=$(uname -r)
 ```
 After installation, set pci-e device to 
 ![изображение](https://github.com/user-attachments/assets/d7c775a0-58f5-4370-9d9e-5cf8e49feacc)

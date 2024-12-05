@@ -128,7 +128,7 @@ apt update && apt install linux-headers-$(uname -r)
 apt update && apt install git  mokutil
 ```
 After installation, set pci-e device to 
-![изображение](https://github.com/user-attachments/assets/0f392fce-0ac2-47ef-ad8d-9bced6534f8e)
+![изображение](https://github.com/user-attachments/assets/d7c775a0-58f5-4370-9d9e-5cf8e49feacc)
 
 Now, you are able to use GPU to accelerate workloads (like jellyfin hardware transcoding)
 add Primary GPU if you want to use GPU in GUI acceleration

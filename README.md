@@ -1,15 +1,6 @@
-# Intel Gen 12 vGPU (SR-IOV) on Proxmox
+# Intel Gen 13 vGPU (SR-IOV) on Proxmox on ms-01
 
-This guide is designed to help you virtualize the 12th-generation Intel integrated GPU (iGPU) and share it as a virtual GPU (vGPU) with hardware acceleration and video encoding/decoding capabilities across multiple VMs.
-
-### Introduction
-
-Although not suited for gaming due to the limited performance of Intel’s iGPU, especially when shared among multiple VMs, this setup excels at video decoding tasks like streaming YouTube and accelerating RDP sessions without burdening the CPU.
-
-Once you complete this setup, consider enhancing your RDP experience with my project [UpinelBetterRDP](https://github.com/Upinel/BetterRDP), which leverages vGPU capabilities.
-
-### Lazy Option
-If you are install it on a fresh Proxmox System with EFI boot **ON** and Secure Boot **Off**, you may able to use this one-click installer [Upinel/PVE-Intel-vGP-Lazy](https://github.com/Upinel/PVE-Intel-vGPU-Lazy)
+This guide is designed to help you virtualize the 13th-generation Intel integrated GPU (iGPU) and share it as a virtual GPU (vGPU) with hardware acceleration and video encoding/decoding capabilities across multiple VMs.
 
 ### Disclaimer
 
@@ -19,15 +10,16 @@ This workaround is not officially supported by Proxmox. Use at your own risk.
 
 The environment used for this guide:
 
-• Model: Intel NUC12 Pro Wall Street Canyon (NUC12WSKi5)
+• Model: Minisforum MS-01
 
-• CPU: Intel 12th Gen i5 1240P (12 Cores, 16 Threads)
+• CPU: 13th Gen Intel(R) Core(TM) i9-13900H
 
-• RAM: 64GB DDR4 by Samsung
+• RAM: 64GB DDR5
 
-• Storage: 2TB Samsung 980 Pro NVMe SSD and 4TB Samsung 870 Evo SATA SSD
+• linux: 6.8.12-4-pve
 
-• Graphics: Intel Iris Xe Graphics (80 Execution Units)
+• Proxmox: 8.3
+
 
 ### Prerequisites
 
@@ -64,6 +56,7 @@ git clone https://github.com/strongtz/i915-sriov-dkms.git
 cd ~/i915-sriov-dkms
 cp -a ~/i915-sriov-dkms/dkms.conf{,.bak}
 sed -i 's/ -j$(nproc)//g' ~/i915-sriov-dkms/dkms.conf
+sed -i 's/GUCFIRMWARE_MINOR:-9/GUCFIRMWARE_MINOR:-13/' Makefile
 dkms_ver=$(grep 'PACKAGE_VERSION=' dkms.conf | awk -F '=' '{print $2}' | tr -d '"')
 cat ~/i915-sriov-dkms/dkms.conf
 ```
@@ -115,78 +108,30 @@ And you should able to see the minor **PCIe IDs 1-7** and finally **Enabled 7
 lspci | grep VGA
 dmesg | grep i915
 ```
-Now your host is prepared, and you can set up Windows 10/11 VMs with SR-IOV vGPU support.
+Now your host is prepared, and you can set up Windows 10/11 and Linux VMs with SR-IOV vGPU support.
 
-## Windows Installation
-I will write a simplier version of Windows Installation Guide soon. Stay Tune.
+## On Windows VM:
+Set pci-e device to
+![изображение](https://github.com/user-attachments/assets/e93e9630-3d6a-474c-870b-b161b73e0333)
+## On Linux VM:
+You need to compile DKMS module in to VM.
+So, go to DKMS Setup part of guide and repeat it in VM
 
-### Download Windows Images and Virtos Driver
-1. Download the latest VirtIO Windows driver ISO from [here](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso). 
-2. Download the Windows 11 ISO from [here](https://www.microsoft.com/software-download/windows11). Use the **Download Windows 11 Disk Image (ISO) for x64 devices** option.
-3. Upload both .iso image to your Proxmox storage, I use local -> ISO Images here
-4. Start the VM creation process. On the **General** tab enter the name of your VM. Click **Next**.
-5. On the **OS** tab select the Windows 11 ISO.  Change the Guest OS to **Microsoft Windows, 11/2022**. Tick the box for the VirtIO drivers, then select your Windows VirtIO ISO. Click **Next**. **Note:** The VirtIO drivers option is new to Proxmox 8.1. I added a Proxmox 8.0 step at the end to manually add a new CD drive and mount the VirtIO ISO.
-6. On the **System** page modify the Machine Type to **Q35**, SCSI Controller to **VirtIO SCSI single**, BIOS to **OVMF (UEFI)**. If you are installing Windows 11, also enable TPM 2.0. If your local VM storage is named differently (e.g. NOT **local-lvm**, use that instead).
-7. On the **Disks** tab, modify the size as needed. I suggest a minimum of 64GB. Modify the **Cache** and **Discard** settings as shown. Only enable **Discard** if using SSD/NVMe storage (not a spinning disk).
-8. On the **CPU** tab, change the **Type** to **host**. Allocate however many cores you want. I chose 2.
-9.  On the **Memory** tab allocated as much memory as you want. I suggest 8GB or more. 
-10.  On the **Network** tab change the model to **VirtIO**.
-11.  Review your VM configuration. Click **Finish**. **Note:** If you are on Proxmox 8.0, modify the hardware configuration again and add a CD/DVD drive and select the VirtIO ISO image. Do not start the VM. 
-
-### Windows 11 Installation
-1.  In Proxmox click on the Windows 11 VM, then open a console. Start the VM, then press **Enter** to boot from the CD.
-2.  Select your language, time, currency, and keyboard. Click **Next**. Click **Install now**.
-3.  Click **I don’t have a product key**. 
-4.  Select **Windows 11 Pro**. Click **Next**.
-5.  Tick the box to accept the license agreement. Click **Next**.
-6.  Click on **Custom** install.
-7.  Click **Load driver**.
-8.  Click **OK**.
-9.  Select the **w11** driver. Click **Next**.
-10.  **On Where do you want to install Windows** click **Next**.
-11.  Sit back and wait for Windows 11 to install.
-
-### Windows 11 Initial Configuration
-
-**Note:** I strongly suggest using a Windows local account during setup, and not your Microsoft cloud account. This will make remote desktop setup easier, as you can’t RDP to Windows 11 using your Microsoft cloud account. The procedure below “tricks” Windows into allowing you to create a local account by attempting to use a locked out cloud account. Also, do NOT use the same username for the local account as your Microsoft cloud account. This might cause complications if you later add your Microsoft cloud account.
-
-1.  Once Windows boots you should see a screen confirming your country or region. Make an appropriate selection and click **Yes**.
-2.  Confirm the right keyboard layout. Click **Yes**. Add a second keyboard layout if needed. 
-3.  Wait for Windows to check for updates. Windows may reboot. 
-4.  Enter the name of your PC. Click **Next**. Wait for Windows to reboot.
-5.  Click **Set up for personal use**. Click **Next**. Click **Sign in**.
-6.  To bypass using your Microsoft cloud account, enter **user @ outlook .com **(no spaces), enter a random password, click **Next** on **Oops, something went wrong**. 
-7.  On the** Who’s going to use this device?** screen enter a username. Click **Next**.
-8.  Enter a password. Click **Next**.
-9.  Select your security questions and enter answers.
-10. Select the Privacy settings you desire and click **Accept**.
-11. In Windows open the mounted ISO in Explorer. Run **virtio-win-gt-x64** and **virtio-win-guest-tools**. Use all default options.
-12. You will probably also want to change the Windows power plan so that the VM doesn’t hibernate (unless you want it to).
-13. You may want to disable local account password expiration, as RDP will fail when your password expires with no way to reset. You’d need to re-enable the Proxmox console to reset your password (see later in this post for a how to).
+Change:
 ```
-wmic UserAccount set PasswordExpires=False
+apt update && apt install pve-headers-$(uname -r)
+apt update && apt install git pve-headers mokutil
 ```
+to
+```
+apt update && apt install linux-headers-$(uname -r)
+apt update && apt install git  mokutil
+```
+After installation, set pci-e device to 
+![изображение](https://github.com/user-attachments/assets/0f392fce-0ac2-47ef-ad8d-9bced6534f8e)
 
-## Windows 11 vGPU Configuration
-1. Open a Proxmox console to the VM and login to Windows 11. In the search bar type **remote desktop**, then click on remote** desktop settings**.
-2. Enable **Remote Desktop**. Click **Confirm**.
-3. Open your favorite RDP client and login using the user name and credentials you setup. You should now see your Windows desktop and the Proxmox console window should show the lock screen.
-4. Inside the Windows VM open your favorite browser and download the latest Intel “Recommended” graphics driver from [here](https://www.intel.com/content/www/us/en/download/726609/intel-arc-iris-xe-graphics-whql-windows.html). In my case I’m grabbing **31.0.101.4972**.
-5. Shutdown the Windows VM. 
-6. You can now unmount the Windows 11 and VirtIO ISOs.
-7. In the Proxmox console click on the Windows 11 VM in the left pane. Then click on **Hardware**. Click on the **Display** item in the right pane. Click **Edit**, then change it to **none**.
-**Note:** If in the next couple of steps the 7 GPU VFs aren’t listed, try rebooting your Proxmox host and see if they come back. Then try adding one to your Windows VM again.
-8. In the top of the right pane click on **Add**, then select **PCI Device**.
-9. Select **Raw Device**. Then review all of the PCI devices available. Select one of the sub-function (.1, .2, etc..) graphics controllers (i.e. ANY entry except the 00:02.0). Do **NOT** use the root “0” device, for ANYTHING. I chose **02.1**. Click** Add**. **Do NOT** tick the “All Functions” box. Tick the box next to **Primary GPU**. Click **Add**.
-10. Start the Windows 11 VM and wait a couple of minutes for it to boot and RDP to become active. Note, the Proxmox Windows console will NOT connect since we removed the virtual VGA device. You will see a **Failed to connect to server** message. You can now ONLY access Windows via RDP. 
-11. RDP into the Windows 11 VM. Locate the Intel Graphics driver installer and run it. If all goes well, you will be presented with an **Installation complete!** screen. Reboot. If you run into issues with the Intel installer, skip down to my troubleshooting section below to see if any of those tips help. 
-
-## Windows 11 vGPU Validation
-1. RDP into Windows and launch **Device Manager**. 
-2. Expand **Display adapters** and verify there’s an Intel adapter in a healthy state (e.g. no error 43).
-3. Launch **Intel Arc Control**. Click on the **gear icon**, **System Info**, **Hardware**. Verify it shows **Intel Iris Xe**.
-4. Launch **Task Manager**, then watch a YouTube video. Verify the GPU is being used.
-
+Now, you are able to use GPU to accelerate workloads (like jellyfin hardware transcoding)
+add Primary GPU if you want to use GPU in GUI acceleration
 ## Appedixies
 ### Appedix 1 - Kernal lower than 6.1
 You can update the PVE kernel to 6.2 5.19 using these commands:
@@ -205,7 +150,7 @@ deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription
 deb http://security.debian.org bookworm-security main contrib
 ```
 2. Install 6.5 kernel.
-```bas
+```bash
 apt install pve-kernel-6.5
 ```
 3.  Update apt and install headers.
@@ -246,7 +191,6 @@ By completing this guide, you should be able to share your Intel Gen 12 iGPU acr
 
 The DKMS module by Strongz is instrumental in making this possible ([i915-sriov-dkms GitHub repository](https://github.com/strongtz/i915-sriov-dkms?ref=michaels-tinkerings)).  
 Additionally, Derek Seaman and Michael's blog post was an inspirational resource ([Derek Seaman’s Proxmox vGPU Guide](https://www.derekseaman.com/2023/11/proxmox-ve-8-1-windows-11-vgpu-vt-d-passthrough-with-intel-alder-lake.html) & [vGPU (SR-IOV) with Intel 12th Gen iGPU](https://www.michaelstinkerings.org/gpu-virtualization-with-intel-12th-gen-igpu-uhd-730/)).  
-*Because this is a lazy installer, to reduce variances, this pack also included the archive of strongtz/i915-sriov-dkms driver on the date of 21 Feb 2024.*  
 This installer is tailored for Proxmox 8, aiming to streamline the installation process. 
 
 ## License
@@ -256,5 +200,4 @@ This project is licensed under Apache License, Version 2.0.
 Nova Upinel Chow  
 Email: dev@upinel.com
 
-## Buy me a coffee
-If you wish to donate us, please donate to [https://paypal.me/Upinel](https://paypal.me/Upinel), it will be really lovely.
+If you wish to donate original author go to a root project

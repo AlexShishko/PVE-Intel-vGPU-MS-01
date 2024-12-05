@@ -108,6 +108,15 @@ And you should able to see the minor **PCIe IDs 1-7** and finally **Enabled 7
 lspci | grep VGA
 dmesg | grep i915
 ```
+### Create vGPU pool
+1. Navigate to Datacenter > Resource Mappings
+2. Click add in PCI devices
+3. Name the pool something like vGPU-Pool
+4. Map all 7 VFs for pve 1 but NOT the root device i.e 0000:00:02.x not 0000:00:02
+5. Click create
+
+![изображение](https://github.com/user-attachments/assets/d82e7b41-071f-48d0-b96a-21b36c723c4c)
+
 Now your host is prepared, and you can set up Windows 10/11 and Linux VMs with SR-IOV vGPU support.
 
 ## On Windows VM:
